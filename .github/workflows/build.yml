@@ -1,40 +1,48 @@
 name: Build Deb
 
 on:
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest # 必须使用 macOS 环境
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. 自动解压你上传的 tar.gz 包 (保留这一部分)
+      # 1. 解压源码包
       - name: Extract source
         run: |
-          tar -xzvf liquidass-alerts-only-src.tar.gz
+          tar -xzvf NoNotesToolbar.tar.gz
           ls -la
+          find . -name "Makefile" -not -path './.git*'
 
-      # 2. 手动安装 Theos（替换掉那个已经失效的action）
+      # 2. 安装 Theos + SDK + ldid
       - name: Install Theos
         run: |
           export THEOS=~/theos
           git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --depth 1 https://github.com/theos/sdks.git /tmp/sdks
+          mkdir -p $THEOS/sdks
+          cp -R /tmp/sdks/iPhoneOS16.5.sdk $THEOS/sdks/ 2>/dev/null || cp -R /tmp/sdks/iPhoneOS*.sdk $THEOS/sdks/
+          brew install ldid
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           echo "PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
+          ls $THEOS/sdks/
 
-      # 3. 进入解压出的目录进行编译
+      # 3. 编译（自动找到含 Makefile 的目录）
       - name: Build Package
         run: |
-          if [ -d "liquidass-alerts-only-src" ]; then cd liquidass-alerts-only-src; fi
+          MAKEFILE_DIR=$(find . -name "Makefile" -not -path './.git*' | head -1 | xargs dirname)
+          echo "编译目录: $MAKEFILE_DIR"
+          cd "$MAKEFILE_DIR"
           make clean
           make package FINALPACKAGE=1
 
-      # 4. 上传编译好的 deb 文件
+      # 4. 上传 deb
       - name: Upload Deb
         uses: actions/upload-artifact@v4
         with:
-          name: liquidass-deb
+          name: NoNotesToolbar-deb
           path: "**/*.deb"
