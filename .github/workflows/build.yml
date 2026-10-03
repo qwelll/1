@@ -1,32 +1,33 @@
 name: Build Deb
 
 on:
-  workflow_dispatch: # 允许在手机端手动点击触发
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   build:
-    runs-on: macos-latest # 必须是 macOS 环境，因为 Theos 需要 Xcode
+    runs-on: macos-latest # 必须使用 macOS 环境
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. 自动解压你上传的 tar.gz 包
+      # 1. 自动解压你上传的 tar.gz 包 (保留这一部分)
       - name: Extract source
         run: |
           tar -xzvf liquidass-alerts-only-src.tar.gz
-          # 查看解压后的目录结构，确认有没有 Makefile
           ls -la
 
-      # 2. 安装 Theos 环境
+      # 2. 手动安装 Theos（替换掉那个已经失效的action）
       - name: Install Theos
-        uses: Randomblock1/theos-action@v1
+        run: |
+          export THEOS=~/theos
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          echo "PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
 
       # 3. 进入解压出的目录进行编译
       - name: Build Package
         run: |
-          # 因为解压出来的文件夹名字未知，这里尝试自动进入包含 Makefile 的目录
-          # 如果解压后直接在当前目录，就不需要 cd
           if [ -d "liquidass-alerts-only-src" ]; then cd liquidass-alerts-only-src; fi
           make clean
           make package FINALPACKAGE=1
@@ -36,4 +37,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: liquidass-deb
-          path: "**/*.deb" # 自动搜索所有目录下的 deb 文件
+          path: "**/*.deb"
