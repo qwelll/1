@@ -1,0 +1,28 @@
+name: Build Deb
+
+on:
+  workflow_dispatch: # 允许你在手机端手动点击触发
+
+jobs:
+  build:
+    runs-on: macos-latest # Theos 编译需要 macOS 环境
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Theos
+        uses: Randomblock1/theos-action@v1 # 自动安装 Theos 环境
+
+      - name: Build Package
+        run: |
+          make clean
+          make package FINALPACKAGE=1
+
+      - name: Upload Deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: liquidass-deb
+          path: ./packages/*.deb
