@@ -1,28 +1,50 @@
 name: Build Deb
 
 on:
-  workflow_dispatch: # 允许你在手机端手动点击触发
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   build:
-    runs-on: macos-latest # Theos 编译需要 macOS 环境
+    runs-on: macos-latest # 必须使用 macOS 环境
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
+      # 1. 自动解压你上传的 tar.gz 包 (保留这一部分)
+      - name: Extract source
+        run: |
+          tar -xzvf liquidass-alerts-only-src.tar.gz
+          ls -la
+          echo "=== 列出所有子目录 ==="
+          find . -type d -not -path './.git*' | head -50
+          echo "=== 查找所有 Makefile ==="
+          find . -name "Makefile" -not -path './.git*'
+
+      # 2. 手动安装 Theos（替换掉那个已经失效的action）
       - name: Install Theos
-        uses: Randomblock1/theos-action@v1 # 自动安装 Theos 环境
+        run: |
+          export THEOS=~/theos
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --depth 1 https://github.com/theos/sdks.git /tmp/sdks
+          mkdir -p $THEOS/sdks
+          cp -R /tmp/sdks/iPhoneOS16.5.sdk $THEOS/sdks/ 2>/dev/null || cp -R /tmp/sdks/iPhoneOS*.sdk $THEOS/sdks/
+          # 安装 ldid
+          brew install ldid
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          echo "PATH=$THEOS/bin:$PATH" >> $GITHUB_ENV
+          ls $THEOS/sdks/
 
+      # 3. 进入解压出的目录进行编译
       - name: Build Package
         run: |
+          cd liquidass-alerts-only
           make clean
           make package FINALPACKAGE=1
 
+      # 4. 上传编译好的 deb 文件
       - name: Upload Deb
         uses: actions/upload-artifact@v4
         with:
           name: liquidass-deb
-          path: ./packages/*.deb
+          path: "**/*.deb"
