@@ -1,0 +1,9 @@
+Package: com.qwelll.liquidglassalerts
+Name: Liquid Glass Alerts
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Liquid Glass UIAlertController only. Alerts-only build, no other surfaces.
+Maintainer: qwelll
+Author: qwelll
+Section: Tweaks
+Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 14.0)
